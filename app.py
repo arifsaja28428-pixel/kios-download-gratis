@@ -2,10 +2,9 @@ import streamlit as st
 import yt_dlp
 
 # --- KONFIGURASI HALAMAN ---
-st.set_page_config(page_title="Free Video Downloader", page_icon="🎬", layout="centered")
+st.set_page_config(page_title="Video Downloader Pro - Pilih Resolusi", page_icon="🎬", layout="centered")
 
 # --- IKLAN ADSTERRA ATAS ---
-# Bagian ini akan menampilkan iklan Anda di bagian paling atas halaman
 st.components.v1.html(
     """
     <div style="text-align:center;">
@@ -17,19 +16,17 @@ st.components.v1.html(
 
 # --- TAMPILAN UTAMA ---
 st.title("🎬 YouTube Video Downloader")
-st.write("Download video YouTube favorit Anda dengan mudah dan gratis!")
+st.write("Tempel link YouTube, pilih resolusi, dan download gratis!")
 
-# Input URL dari User
 url = st.text_input("Tempel Link YouTube di sini:", placeholder="https://www.youtube.com/watch?v=...")
 
 if url:
     try:
-        # Menampilkan loading spinner saat mengecek video
-        with st.spinner('Sedang mencari video...'):
+        with st.spinner('Sedang mengambil daftar resolusi...'):
             ydl_opts = {
                 'quiet': True,
                 'no_warnings': True,
-                'format': 'best', # Mengambil format terbaik yang sudah tergabung (Video+Audio)
+                'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
             }
             
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -37,46 +34,63 @@ if url:
                 title = info.get('title')
                 thumbnail = info.get('thumbnail')
                 
-                # Tampilkan Preview Video
                 st.image(thumbnail, use_container_width=True)
                 st.subheader(f"✅ {title}")
                 
-                # Ambil Link Download Langsung dari Server YouTube
-                # Kita pilih format MP4 yang paling umum
-                formats = [f for f in info.get('formats', []) if f.get('vcodec') != 'none' and f.get('acodec') != 'none' and f.get('ext') == 'mp4']
+                # --- PROSES FILTER RESOLUSI ---
+                formats = info.get('formats', [])
+                valid_formats = []
+                seen_resolutions = set()
+
+                # Cari format MP4 yang punya video + audio
+                for f in formats:
+                    if f.get('vcodec') != 'none' and f.get('acodec') != 'none' and f.get('ext') == 'mp4':
+                        res = f.get('height')
+                        if res and res not in seen_resolutions:
+                            valid_formats.append(f)
+                            seen_resolutions.add(res)
                 
-                if formats:
-                    # Ambil yang kualitasnya paling oke
-                    best_format = formats[-1]
-                    download_url = best_format.get('url')
+                # Urutkan dari resolusi tertinggi ke terendah
+                valid_formats = sorted(valid_formats, key=lambda x: x['height'], reverse=True)
+
+                if valid_formats:
+                    # Buat daftar pilihan untuk dropdown
+                    options = {f"{f['height']}p (MP4)": f['url'] for f in valid_formats}
                     
-                    st.success("Video siap didownload!")
-                    
-                    # Tombol Download Besar
+                    selected_res = st.selectbox("Pilih Resolusi Video:", list(options.keys()))
+                    download_url = options[selected_res]
+
                     st.markdown(
                         f'''
-                        <a href="{download_url}" target="_blank" style="text-decoration: none;">
-                            <div style="background-color: #2ecc71; color: white; padding: 15px; text-align: center; border-radius: 10px; font-weight: bold; font-size: 20px; margin-top: 10px;">
-                                📥 DOWNLOAD SEKARANG
-                            </div>
-                        </a>
-                        <p style="text-align: center; font-size: 12px; color: gray; margin-top: 5px;">
-                            (Setelah klik, video akan terbuka di tab baru. Klik kanan dan "Save Video As" atau klik titik tiga di pojok video)
-                        </p>
+                        <div style="text-align: center;">
+                            <a href="{download_url}" target="_blank" style="text-decoration: none;">
+                                <div style="background-color: #2ecc71; color: white; padding: 18px; text-align: center; border-radius: 12px; font-weight: bold; font-size: 22px; margin-top: 20px; cursor: pointer;">
+                                    🚀 DOWNLOAD {selected_res}
+                                </div>
+                            </a>
+                            <p style="color: #ffcc00; font-size: 14px; margin-top: 15px; font-weight: bold;">
+                                TIPS: Jika video terbuka di tab baru, klik TITIK TIGA (⋮) di pojok video lalu pilih "Download".
+                            </p>
+                        </div>
                         ''', 
                         unsafe_allow_html=True
                     )
                 else:
-                    st.warning("Maaf, format MP4 langsung tidak ditemukan untuk video ini.")
+                    st.warning("Maaf, tidak ditemukan format MP4 standar untuk video ini. Coba link video lain.")
 
     except Exception as e:
-        st.error("Waduh! Link tidak valid atau video tidak bisa diakses. Pastikan link benar ya!")
+        st.error("Terjadi kesalahan atau video tidak ditemukan. Pastikan link YouTube benar.")
 
-# --- JARAK ---
+# --- ARTIKEL SEO ---
 st.write("---")
+st.subheader("Cara Download Video YouTube ke Galeri")
+st.write("""
+Layanan ini memungkinkan Anda memilih berbagai resolusi mulai dari **360p, 480p, hingga 720p (HD)**. 
+Cukup salin URL video dari aplikasi YouTube, tempelkan di kotak di atas, pilih kualitas yang diinginkan, 
+dan klik tombol download. Sangat mudah, tanpa login, dan gratis selamanya!
+""")
 
 # --- IKLAN ADSTERRA BAWAH ---
-# Bagian ini untuk iklan tambahan di bawah agar pendapatan maksimal
 st.components.v1.html(
     """
     <div style="text-align:center;">
@@ -85,5 +99,3 @@ st.components.v1.html(
     """,
     height=150,
 )
-
-st.caption("© 2026 Free Downloader Service. Semua hak cipta dilindungi.")
